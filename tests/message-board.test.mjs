@@ -7,12 +7,71 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { test } from "node:test";
+import { createServer } from "node:http";
 
 const server = new URL("../bin/message-board.mjs", import.meta.url);
 
-async function connect(data) {
+test("host locale changes notices without restarting or rewriting user content", async (t) => {
+  let locale = "zh";
+  const bridge = createServer((request, response) => {
+    assert.equal(request.headers.authorization, "Bearer fixture-token");
+    let body = "";
+    request.on("data", (chunk) => {
+      body += chunk;
+    });
+    request.on("end", () => {
+      assert.equal(JSON.parse(body).operation, "locale.get");
+      response.setHeader("Content-Type", "application/json");
+      response.end(
+        JSON.stringify({ ok: true, result: { version: 1, locale } }),
+      );
+    });
+  });
+  bridge.listen(0, "127.0.0.1");
+  await once(bridge, "listening");
+  const data = await mkdtemp(join(tmpdir(), "message-board-locale-"));
+  const client = await connect(data, {
+    OPENAGENT_PLUGIN_HOST_URL: `http://127.0.0.1:${bridge.address().port}/v1/execute`,
+    OPENAGENT_PLUGIN_HOST_TOKEN: "fixture-token",
+    OPENAGENT_PLUGIN_ID: "message-board",
+  });
+  t.after(async () => {
+    await client.close();
+    bridge.closeAllConnections();
+    await new Promise((resolve) => bridge.close(resolve));
+    await rm(data, { recursive: true, force: true });
+  });
+  const root = await client.call("post", {
+    new_channel_name: "保留",
+    text: "Original 用户内容",
+    request_id: "same",
+  });
+  const before = await readFile(join(data, "board.json"), "utf8");
+  async function notice() {
+    const result = await client.request("tools/call", {
+      name: "read_post",
+      arguments: { agent_id: "/root", message_id: "missing-id" },
+    });
+    assert.equal(result.result.isError, true);
+    return result.result.content[0].text;
+  }
+  const chinese = await notice();
+  assert.match(chinese, /[\u4e00-\u9fff]/);
+  assert.ok(chinese.includes("missing-id"));
+  locale = "en";
+  assert.match(await notice(), /post not found: missing-id/);
+  assert.equal(
+    (await client.call("read_post", { message_id: root.message_id })).text,
+    "Original 用户内容",
+  );
+  assert.equal(await readFile(join(data, "board.json"), "utf8"), before);
+  locale = "zh";
+  assert.equal(await notice(), chinese);
+});
+
+async function connect(data, environment = {}) {
   const child = spawn("node", [server.pathname.replace(/^\/([A-Z]:)/, "$1")], {
-    env: { ...process.env, PLUGIN_DATA: data },
+    env: { ...process.env, PLUGIN_DATA: data, ...environment },
     stdio: ["pipe", "pipe", "pipe"],
   });
   let id = 0;
@@ -67,6 +126,33 @@ async function connect(data) {
     },
   };
 }
+
+test("SDK locale context works when the process bridge is unreachable", async (t) => {
+  const data = await mkdtemp(join(tmpdir(), "message-board-offline-"));
+  const client = await connect(data, {
+    OPENAGENT_PLUGIN_HOST_URL: "http://127.0.0.1:1/v1/execute",
+    OPENAGENT_PLUGIN_HOST_TOKEN: "fixture",
+    OPENAGENT_PLUGIN_ID: "message-board",
+  });
+  t.after(async () => {
+    await client.close();
+    await rm(data, { recursive: true, force: true });
+  });
+  await client.call("create_channel", {
+    channel_name: "offline",
+    _openagent: { locale: "zh" },
+  });
+  const result = await client.request("tools/call", {
+    name: "read_post",
+    arguments: {
+      agent_id: "/root",
+      message_id: "missing",
+      _openagent: { locale: "zh" },
+    },
+  });
+  assert.equal(result.result.isError, true);
+  assert.match(result.result.content[0].text, /找不到消息/);
+});
 
 async function fixture(t) {
   const data = await mkdtemp(join(tmpdir(), "message-board-test-"));

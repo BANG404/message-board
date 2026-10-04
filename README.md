@@ -46,14 +46,28 @@ servers sharing that data directory, preserve `board.json`, then remove only
 process. Invalid JSON or an unsupported board version returns an error and
 preserves the file for recovery; it never resets user data.
 
-Run package verification with `node --test tests/message-board.test.mjs`, then
+Run package verification with `node --test tests/*.test.mjs`, then
 run the current `openagent-plugin-kit/scripts/validate-plugin.mjs` against this
 directory. Install a staged copy in a fresh `OPENAGENT_HOME` for Runtime
 qualification; source edits require reinstalling that copy. Verify all nine
 tools, disable/re-enable, and uninstall/reinstall with retained `plugin-data`.
 
-This package satisfies the portable Agent Plugins 1.0 package shape. OpenAgent's
-new official-plugin language requirements remain a qualification blocker until
-the Runtime, typed client, catalog, and plugin-kit implement the shared language
-metadata contract. English model-facing Skills and Unicode message support do
-not establish complete English/Chinese product presentation support.
+## Languages
+
+Version 1.1.0 declares English and Chinese metadata and operational notices in
+`extensions.openagent.i18n`. OpenAgent displays those declarations before and
+after installation. Each request reads the SDK's live `_openagent.locale`
+context. This also works when process network access is restricted. Independent
+process calls without that context query the authenticated version-one
+`locale.get` Host Bridge operation; standalone calls otherwise use English.
+Resolution uses exact locale, supported base language, then declared default.
+Switching language changes future notices without restarting the server. User
+messages, IDs, stored data, and retry fingerprints retain their original values.
+The bundled dependency-free host client is MIT licensed in `lib/LICENSE-MIT`.
+
+Validate with the current plugin-kit using `--require-i18n` and, for an official
+release, `--locales=<keys from OpenAgent src/lib/platformLocales.json>`. Record
+both package and SDK revisions and inspect both plugin tabs in light/dark themes
+while switching languages in both directions. A declaration alone does not
+qualify a release. Older SDK versions without `locale.get` are not qualified for
+this version's live-language behavior.

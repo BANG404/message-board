@@ -12,6 +12,7 @@ import { dirname, join } from "node:path";
 import process from "node:process";
 import readline from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
+import { requestLocale, errorNotice } from "./i18n.mjs";
 
 const MAX_PAGE = 50;
 const MAX_TEXT = 64 * 1024;
@@ -621,15 +622,17 @@ async function handle(request) {
         ? request.params.protocolVersion
         : "2025-06-18",
       capabilities: { tools: {} },
-      serverInfo: { name: "message-board", version: "1.0.1" },
+      serverInfo: { name: "message-board", version: "1.1.0" },
     };
   if (["notifications/initialized", "ping"].includes(request.method)) return {};
   if (request.method === "tools/list") return { tools: toolList() };
   if (request.method === "tools/call") {
     const name = req(request.params || {}, "name");
     if (!Object.hasOwn(specs, name)) fail(`unknown tool: ${name}`);
+    let locale = "en";
     try {
       const args = request.params?.arguments ?? {};
+      locale = await requestLocale(args);
       validate(name, args);
       return await locked(async () => {
         let bounded = { ...args };
@@ -679,7 +682,7 @@ async function handle(request) {
         content: [
           {
             type: "text",
-            text: error instanceof Error ? error.message : String(error),
+            text: errorNotice(error, locale),
           },
         ],
         isError: true,

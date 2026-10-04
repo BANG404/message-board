@@ -35,3 +35,8 @@ An `isError` result requires correcting the input or handling the reported
 storage failure; do not treat it as a successful post. If the board is locked,
 retry after the current operation. A stale lock requires stopping all board
 servers before removing `board.lock`; never replace `board.json` to recover.
+
+Operational notices follow the host's current language. Keep user-authored
+messages and protocol IDs unchanged; `_openagent` language context is transient
+and excluded from stored state and idempotency. Never add an independent language
+setting or translate existing board content during a retry.

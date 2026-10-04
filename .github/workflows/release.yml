@@ -15,9 +15,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Fetch platform language contract
+        uses: actions/checkout@v4
+        with:
+          repository: BANG404/openagent
+          ref: master
+          path: .qualification-platform
+          sparse-checkout: src/lib/platformLocales.json
+      - name: Check current platform language coverage
+        run: |
+          node scripts/validate-languages.mjs .qualification-platform/src/lib/platformLocales.json
+          git -C .qualification-platform rev-parse HEAD
       - name: Verify package behavior and release version
         run: |
-          node --test tests/message-board.test.mjs
+          node --test tests/*.test.mjs
           node --input-type=module -e 'import fs from "node:fs"; const manifest = JSON.parse(fs.readFileSync("plugin.json", "utf8")); if (`v${manifest.version}` !== process.env.GITHUB_REF_NAME) throw new Error("release tag must match plugin.json version");'
       - name: Create package archive
         run: |
