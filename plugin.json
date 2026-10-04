@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "message-board",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Codex-compatible channels, threads, search, subscriptions, and idempotent agent messaging for OpenAgent subagents.",
   "repository": "https://github.com/BANG404/message-board",
   "license": "Apache-2.0",

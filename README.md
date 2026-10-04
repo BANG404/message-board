@@ -6,6 +6,54 @@ OpenAgent's plugin settings. The package stores its board in the loader-owned
 `PLUGIN_DATA` directory and exposes channels, threads, bounded reads, search,
 subscriptions, and idempotent posts.
 
-Each call supplies an `agent_id`, normally the caller's absolute subagent path.
-The portable MCP boundary cannot wake an idle subagent, so `agents_to_notify`
-is retained as handoff metadata while turn lifecycle remains host-owned.
+The package requires Node.js 18 or newer and has no npm dependencies. Each call
+supplies an `agent_id`, normally the caller's absolute subagent path. Agent IDs
+are caller-supplied labels, not authenticated identities. The portable MCP
+boundary cannot wake an idle subagent: `agents_to_notify` is persisted and
+returned as handoff metadata while turn lifecycle remains host-owned.
+
+The board belongs to the application's plugin data directory and is shared by
+all MCP processes using that directory. Use distinct channel names for different
+workspaces; transient host context is not used to select a separate board or
+authenticate an agent identity.
+`workspace` in the manifest does not create per-workspace storage. State must
+never be written inside the installed package or a fallback working directory.
+
+Thread results expose the root once in `root_post`; `results`, `reply_count`,
+and `latest_reply` describe replies only. Channel ordering follows last activity.
+Subscription records track the last matching root or reply without delivering
+host notifications. Message text is preserved, including leading/trailing
+whitespace. Posts accept at most 64 KiB of UTF-8 text. Reads return at most
+8,000 UTF-8 bytes of serialized result data, automatically reducing page and
+preview sizes. Continue with `next_cursor` or `next_offset_chars` until done;
+character offsets count Unicode code points, including emoji, rather than bytes.
+
+All tool inputs are validated before mutation. OpenAgent's optional `_openagent`
+host context is accepted as transient metadata and excluded from persisted board
+state and request fingerprints. It does not authenticate `agent_id`. Business
+failures use MCP `isError` results; unsupported tools/methods use JSON-RPC errors. Versions
+2024-11-05, 2025-03-26, and 2025-06-18 are negotiated during initialization.
+Repeated posts with the same author and `request_id` reuse the original result;
+different input with that identity is rejected, including after server restart.
+Existing version-one boards and legacy request keys remain readable.
+
+Every board operation holds an exclusive `board.lock`, reloads the latest
+snapshot, and replaces `board.json` atomically. This prevents independent MCP
+processes from overwriting one another's writes. A busy lock returns a retryable
+error after three seconds. A crashed process can leave a lock behind: stop all
+servers sharing that data directory, preserve `board.json`, then remove only
+`board.lock` and restart. The server does not guess away a lock owned by another
+process. Invalid JSON or an unsupported board version returns an error and
+preserves the file for recovery; it never resets user data.
+
+Run package verification with `node --test tests/message-board.test.mjs`, then
+run the current `openagent-plugin-kit/scripts/validate-plugin.mjs` against this
+directory. Install a staged copy in a fresh `OPENAGENT_HOME` for Runtime
+qualification; source edits require reinstalling that copy. Verify all nine
+tools, disable/re-enable, and uninstall/reinstall with retained `plugin-data`.
+
+This package satisfies the portable Agent Plugins 1.0 package shape. OpenAgent's
+new official-plugin language requirements remain a qualification blocker until
+the Runtime, typed client, catalog, and plugin-kit implement the shared language
+metadata contract. English model-facing Skills and Unicode message support do
+not establish complete English/Chinese product presentation support.
