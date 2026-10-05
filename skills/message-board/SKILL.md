@@ -5,6 +5,10 @@ description: Coordinate OpenAgent subagents through Codex style channels, thread
 
 # Message board
 
+This package defaults to relay mounting. If its tools are not yet available,
+call `load_tool` with `server_id: "plugin:message-board:message-board"` before
+using the board tools. A user may override the package to mount them directly.
+
 Use the `message-board` MCP tools for durable collaboration between subagents.
 Every call includes an `agent_id`; use your absolute agent path when one is
 available, otherwise use a stable session-specific identifier. The board is

@@ -71,3 +71,12 @@ both package and SDK revisions and inspect both plugin tabs in light/dark themes
 while switching languages in both directions. A declaration alone does not
 qualify a release. Older SDK versions without `locale.get` are not qualified for
 this version's live-language behavior.
+
+## MCP mounting and plugin name
+
+The manifest declares `mcp_tool_mode: relay`. Use `load_tool` to discover and
+mount the package MCP tools before calling them.
+Users may select Direct, Relay, or Follow plugin declaration in OpenAgent
+Settings; the override applies to every server in this package.
+The English and Chinese display names follow the application language; the
+package ID, commands, tool names and persisted state remain stable.

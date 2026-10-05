@@ -1,13 +1,14 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "message-board",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Durable channels, threads, search, subscriptions, and idempotent agent collaboration.",
   "repository": "https://github.com/BANG404/message-board",
   "license": "Apache-2.0",
   "keywords": ["codex", "subagent", "message-board", "collaboration"],
   "extensions": {
     "openagent": {
+      "mcp_tool_mode": "relay",
       "capabilities": ["workspace"],
       "i18n": {
         "supported_locales": ["en", "zh"],
@@ -47,7 +48,7 @@
             "notice.storage": "Cannot access board data ({code}); preserve the data and retry after fixing the storage error."
           },
           "zh": {
-            "display_name": "Message Board",
+            "display_name": "留言板",
             "description": "为智能体提供持久化频道、话题、搜索、订阅和幂等消息协作。",
             "notice.required": "必须填写 {field}",
             "notice.length": "{field} 超过 256 个字符",
