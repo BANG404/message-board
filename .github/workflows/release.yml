@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BANG404/openagent
-          ref: master
+          ref: main
           path: .qualification-platform
           sparse-checkout: src/lib/platformLocales.json
       - name: Check current platform language coverage
